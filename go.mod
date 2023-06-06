@@ -1,4 +1,4 @@
-module github.com/a8m/kinesis-producer
+module github.com/BobDu/kinesis-producer-fork
 
 go 1.16
 
