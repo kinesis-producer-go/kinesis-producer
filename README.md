@@ -1,4 +1,4 @@
-# Amazon kinesis producer [![Build status][travis-image]][travis-url] [![License][license-image]][license-url] [![GoDoc][godoc-img]][godoc-url]
+# Amazon kinesis producer [![CI status][ci-image]][ci-url] [![License][license-image]][license-url] [![GoDoc][godoc-img]][godoc-url]
 > A KPL-like batch producer for Amazon Kinesis built on top of the official AWS SDK for Go V2
 and using the same aggregation format that [KPL][kpl-url] use.  
 
@@ -107,7 +107,7 @@ kinesis-producer ships with three logger implementations.
 - `loggers.Zap` uses zap logger
 
 ### License
-MIT
+[MIT][license-url]
 
 [godoc-url]: https://godoc.org/github.com/a8m/kinesis-producer
 [godoc-img]: https://img.shields.io/badge/godoc-reference-blue.svg?style=flat-square
@@ -117,6 +117,5 @@ MIT
 [aggregation-format-url]: https://github.com/a8m/kinesis-producer/blob/master/aggregation-format.md
 [license-image]: https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square
 [license-url]: LICENSE
-[travis-image]: https://img.shields.io/travis/a8m/kinesis-producer.svg?style=flat-square
-[travis-url]: https://travis-ci.org/a8m/kinesis-producer
-
+[ci-image]: https://github.com/kinesis-producer-go/kinesis-producer/actions/workflows/ci.yml/badge.svg
+[ci-url]: https://github.com/kinesis-producer-go/kinesis-producer/actions/workflows/ci.yml

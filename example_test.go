@@ -11,7 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/kinesis"
 )
 
-func ExampleSimple() {
+func ExampleProducer() {
 	logger := &StdLogger{log.New(os.Stdout, "", log.LstdFlags)}
 	cfg, _ := config.LoadDefaultConfig(context.TODO())
 	client := kinesis.NewFromConfig(cfg)
