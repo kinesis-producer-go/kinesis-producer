@@ -163,7 +163,7 @@ func TestProducer(t *testing.T) {
 		wg.Add(len(test.records))
 		for _, r := range test.records {
 			go func(s string) {
-				p.Put([]byte(s), s)
+				p.Put([]byte(s))
 				wg.Done()
 			}(r)
 		}
@@ -205,7 +205,7 @@ func TestNotify(t *testing.T) {
 		done <- true
 	}()
 	for _, r := range records {
-		p.Put([]byte(r), r)
+		p.Put([]byte(r))
 	}
 	wg.Wait()
 	p.Stop()

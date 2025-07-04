@@ -6,6 +6,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	ktypes "github.com/aws/aws-sdk-go-v2/service/kinesis/types"
+	"google.golang.org/protobuf/encoding/protowire"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -15,12 +16,33 @@ var (
 
 type Aggregator struct {
 	buf    []*Record
-	pkeys  []string
 	nbytes int
 }
 
-// Size return how many bytes stored in the aggregator.
-// including partition keys.
+// calculateInitialSize computes the initial size of an empty aggregated record.
+// This includes the magic number, MD5 checksum, and the partition key table overhead.
+func (a *Aggregator) calculateInitialSize() int {
+	initialSize := len(magicNumber) + md5.Size
+
+	// Tag-Length-Value size for string partition_key_table = 1 in AggregatedRecord;
+	initialSize += protowire.SizeTag(1)
+	initialSize += protowire.SizeVarint(8)
+	initialSize += 8
+
+	return initialSize
+}
+
+// NewAggregator creates a new aggregator with proper initialization
+func NewAggregator() *Aggregator {
+	a := &Aggregator{
+		buf: make([]*Record, 0),
+	}
+	a.nbytes = a.calculateInitialSize()
+	return a
+}
+
+// Size return how many bytes if all records in the aggregator stored serialized to KPL Aggregated Record format.
+// Including the magic number, protobuf message and checksum.
 func (a *Aggregator) Size() int {
 	return a.nbytes
 }
@@ -30,24 +52,40 @@ func (a *Aggregator) Count() int {
 	return len(a.buf)
 }
 
-// Put record using `data` and `partitionKey`. This method is thread-safe.
-func (a *Aggregator) Put(data []byte, partitionKey string) {
-	// For now, all records in the aggregated record will have
-	// the same partition key.
-	// later, we will add shard-mapper same as the KPL use.
-	// see: https://github.com/a8m/kinesis-producer/issues/1
-	if len(a.pkeys) == 0 {
-		a.pkeys = []string{partitionKey}
-		a.nbytes += len([]byte(partitionKey))
-	}
-	keyIndex := uint64(len(a.pkeys) - 1)
+// CalculateAddSize calculates the byte size increment that would be added to the final
+// serialized aggregated record if the given data is added. This includes the protobuf
+// wire format overhead for the record and the aggregated record structure.
+// This method does not modify the aggregator state.
+func (a *Aggregator) CalculateAddSize(data []byte) int {
+	// Record wire size
+	recordSize := 0
+	// Tag-Value size for required uint64 partition_key_index = 1 in message Record;
+	recordSize += protowire.SizeTag(1)
+	recordSize += protowire.SizeVarint(uint64(0))
+	// Tag-Length-Value size for required bytes data = 3 in message Record;
+	recordSize += protowire.SizeTag(3)
+	recordSize += protowire.SizeVarint(uint64(len(data)))
+	recordSize += len(data)
 
-	a.nbytes += partitionKeyIndexSize
+	// AggregatedRecord add wire size
+	addSize := 0
+	// Tag-Length-Value size for repeated Record records = 3 in message AggregatedRecord;
+	addSize += protowire.SizeTag(3)
+	addSize += protowire.SizeVarint(uint64(recordSize))
+	addSize += recordSize
+
+	return addSize
+}
+
+// Put record using `data`. This method is thread-safe.
+func (a *Aggregator) Put(data []byte, addSize int) {
+	zero := uint64(0)
 	a.buf = append(a.buf, &Record{
 		Data:              data,
-		PartitionKeyIndex: &keyIndex,
+		PartitionKeyIndex: &zero,
 	})
-	a.nbytes += len(data)
+
+	a.nbytes += addSize
 }
 
 // Drain create an aggregated `kinesis.PutRecordsRequestEntry`
@@ -55,24 +93,30 @@ func (a *Aggregator) Put(data []byte, partitionKey string) {
 //
 // If you interested to know more about it. see: aggregation-format.md
 func (a *Aggregator) Drain() (*ktypes.PutRecordsRequestEntry, error) {
-	if a.nbytes == 0 {
+	if a.Count() == 0 {
 		return nil, nil
 	}
-	data, err := proto.Marshal(&AggregatedRecord{
-		PartitionKeyTable: a.pkeys,
+
+	partitionKey := RandPartitionKey()
+	aggregatedRecordData, err := proto.Marshal(&AggregatedRecord{
+		PartitionKeyTable: []string{partitionKey},
 		Records:           a.buf,
 	})
 	if err != nil {
 		return nil, err
 	}
 	h := md5.New()
-	h.Write(data)
+	h.Write(aggregatedRecordData)
 	checkSum := h.Sum(nil)
-	aggData := append(magicNumber, data...)
-	aggData = append(aggData, checkSum...)
+
+	var buffer bytes.Buffer
+	buffer.Write(magicNumber)
+	buffer.Write(aggregatedRecordData)
+	buffer.Write(checkSum)
+
 	entry := &ktypes.PutRecordsRequestEntry{
-		Data:         aggData,
-		PartitionKey: aws.String(a.pkeys[0]),
+		Data:         buffer.Bytes(),
+		PartitionKey: aws.String(partitionKey),
 	}
 	a.clear()
 	return entry, nil
@@ -80,8 +124,7 @@ func (a *Aggregator) Drain() (*ktypes.PutRecordsRequestEntry, error) {
 
 func (a *Aggregator) clear() {
 	a.buf = make([]*Record, 0)
-	a.pkeys = make([]string, 0)
-	a.nbytes = 0
+	a.nbytes = a.calculateInitialSize()
 }
 
 // Test if a given entry is aggregated record.

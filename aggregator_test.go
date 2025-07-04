@@ -14,27 +14,37 @@ func assert(t *testing.T, val bool, msg string) {
 }
 
 func TestSizeAndCount(t *testing.T) {
-	a := new(Aggregator)
-	assert(t, a.Size()+a.Count() == 0, "size and count should equal to 0 at the beginning")
-	data := []byte("hello")
-	pkey := "world"
-	n := rand.Intn(100)
-	for i := 0; i < n; i++ {
-		a.Put(data, pkey)
+	a := NewAggregator()
+	assert(t, a.Count() == 0, "size and count should equal to 0 at the beginning")
+	assert(t, a.Size() == a.calculateInitialSize(), "size should equal to initial size at the beginning")
+
+	for i := 0; i < 2000; i++ {
+		data := []byte("hello")
+		n := rand.Intn(1000) + 1
+		for j := 0; j < n; j++ {
+			addSize := a.CalculateAddSize(data)
+			a.Put(data, addSize)
+		}
+
+		calCount := a.Count()
+		calSize := a.Size()
+		entry, _ := a.Drain()
+
+		assert(t, calCount == n, "count should be equal to the number of Put calls")
+		assert(t, calSize == len(entry.Data), "size should equal to the serialized data")
 	}
-	assert(t, a.Size() == 5*n+5+8*n, "size should equal to the data and the partition-key")
-	assert(t, a.Count() == n, "count should be equal to the number of Put calls")
 }
 
 func TestAggregation(t *testing.T) {
 	var wg sync.WaitGroup
-	a := new(Aggregator)
+	a := NewAggregator()
 	n := 50
 	wg.Add(n)
 	for i := 0; i < n; i++ {
 		c := strconv.Itoa(i)
 		data := []byte("hello-" + c)
-		a.Put(data, c)
+		addSize := a.CalculateAddSize(data)
+		a.Put(data, addSize)
 		wg.Done()
 	}
 	wg.Wait()
@@ -58,7 +68,8 @@ func TestAggregation(t *testing.T) {
 }
 
 func TestDrainEmptyAggregator(t *testing.T) {
-	a := new(Aggregator)
-	_, err := a.Drain()
+	a := NewAggregator()
+	entry, err := a.Drain()
+	assert(t, entry == nil, "should return an nil entry")
 	assert(t, err == nil, "should not return an error")
 }

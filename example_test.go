@@ -34,7 +34,7 @@ func ExampleProducer() {
 
 	go func() {
 		for i := 0; i < 5000; i++ {
-			err := pr.Put([]byte("foo"), "bar")
+			err := pr.Put([]byte("foo"))
 			if err != nil {
 				logger.Error("error producing", err)
 			}

@@ -8,12 +8,12 @@ package producer
 
 import (
 	"context"
-	"crypto/md5"
 	"errors"
 	"fmt"
 	"sync"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	k "github.com/aws/aws-sdk-go-v2/service/kinesis"
 	ktypes "github.com/aws/aws-sdk-go-v2/service/kinesis/types"
 	"github.com/jpillora/backoff"
@@ -21,9 +21,8 @@ import (
 
 // Errors
 var (
-	ErrStoppedProducer     = errors.New("Unable to Put record. Producer is already stopped")
-	ErrIllegalPartitionKey = errors.New("Invalid parition key. Length must be at least 1 and at most 256")
-	ErrRecordSizeExceeded  = errors.New("Data must be less than or equal to 1MB in size")
+	ErrStoppedProducer    = errors.New("Unable to Put record. Producer is already stopped")
+	ErrRecordSizeExceeded = errors.New("Data must be less than or equal to 1MB in size")
 )
 
 // Producer batches records.
@@ -52,18 +51,18 @@ func New(config *Config) *Producer {
 		done:       make(chan struct{}),
 		records:    make(chan *ktypes.PutRecordsRequestEntry, config.BacklogCount),
 		semaphore:  make(chan struct{}, config.MaxConnections),
-		aggregator: new(Aggregator),
+		aggregator: NewAggregator(),
 	}
 }
 
-// Put `data` using `partitionKey` asynchronously. This method is thread-safe.
+// Put `data` asynchronously. This method is thread-safe.
 //
 // Under the covers, the Producer will automatically re-attempt puts in case of
 // transient errors.
 // When unrecoverable error has detected(e.g: trying to put to in a stream that
 // doesn't exist), the message will returned by the Producer.
 // Add a listener with `Producer.NotifyFailures` to handle undeliverable messages.
-func (p *Producer) Put(data []byte, partitionKey string) error {
+func (p *Producer) Put(data []byte) error {
 	p.RLock()
 	stopped := p.stopped
 	p.RUnlock()
@@ -73,38 +72,40 @@ func (p *Producer) Put(data []byte, partitionKey string) error {
 	if len(data) > maxRecordSize {
 		return ErrRecordSizeExceeded
 	}
-	if l := len(partitionKey); l < 1 || l > 256 {
-		return ErrIllegalPartitionKey
-	}
-	nbytes := len(data) + len([]byte(partitionKey))
-	// if the record size is bigger than aggregation size
-	// handle it as a simple kinesis record
-	if nbytes > p.AggregateBatchSize {
+
+	// if the record size is bigger than aggregation size handle it as a simple kinesis record
+	if len(data) > p.AggregateBatchSize {
 		p.records <- &ktypes.PutRecordsRequestEntry{
 			Data:         data,
-			PartitionKey: &partitionKey,
+			PartitionKey: aws.String(RandPartitionKey()),
 		}
-	} else {
-		p.Lock()
-		needToDrain := nbytes+p.aggregator.Size()+md5.Size+len(magicNumber)+partitionKeyIndexSize > maxRecordSize || p.aggregator.Count() >= p.AggregateBatchCount
-		var (
-			record *ktypes.PutRecordsRequestEntry
-			err    error
-		)
-		if needToDrain {
-			if record, err = p.aggregator.Drain(); err != nil {
-				p.Logger.Error("drain aggregator", err)
-			}
-		}
-		p.aggregator.Put(data, partitionKey)
-		p.Unlock()
-		// release the lock and then pipe the record to the records channel
-		// we did it, because the "send" operation blocks when the backlog is full
-		// and this can cause deadlock(when we never release the lock)
-		if needToDrain && record != nil {
-			p.records <- record
+		return nil
+	}
+
+	p.Lock()
+
+	addSize := p.aggregator.CalculateAddSize(data)
+	// Check if the aggregator needs to be drained using a more precise method
+	// that considers the exact serialized size impact of adding the new data
+	needToDrain := p.aggregator.Size()+addSize > maxRecordSize || p.aggregator.Count() >= p.AggregateBatchCount
+	var (
+		record *ktypes.PutRecordsRequestEntry
+		err    error
+	)
+	if needToDrain {
+		if record, err = p.aggregator.Drain(); err != nil {
+			p.Logger.Error("drain aggregator", err)
 		}
 	}
+	p.aggregator.Put(data, addSize)
+	p.Unlock()
+	// release the lock and then pipe the record to the records channel
+	// we did it, because the "send" operation blocks when the backlog is full
+	// and this can cause deadlock(when we never release the lock)
+	if needToDrain && record != nil {
+		p.records <- record
+	}
+
 	return nil
 }
 
@@ -219,7 +220,7 @@ func (p *Producer) loop() {
 
 func (p *Producer) drainIfNeed() (*ktypes.PutRecordsRequestEntry, bool) {
 	p.RLock()
-	needToDrain := p.aggregator.Size() > 0
+	needToDrain := p.aggregator.Count() > 0
 	p.RUnlock()
 	if needToDrain {
 		p.Lock()
