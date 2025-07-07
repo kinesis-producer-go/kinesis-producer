@@ -1,22 +1,19 @@
 // protoc --go_out=. --go_opt=paths=source_relative messages.proto
-syntax = "proto2";
+
+edition = "2023";
 package producer;
+
+import "google/protobuf/go_features.proto";
+
+option features.(pb.go).api_level = API_OPAQUE;
 option go_package = "./producer";
 
 message AggregatedRecord {
   repeated string partition_key_table     = 1;
-  repeated string explicit_hash_key_table = 2;
   repeated Record records                 = 3;
 }
 
-message Tag {
-  required string key   = 1;
-  optional string value = 2;
-}
-
 message Record {
-  required uint64 partition_key_index     = 1;
-  optional uint64 explicit_hash_key_index = 2;
-  required bytes  data                    = 3;
-  repeated Tag    tags                    = 4;
+  uint64 partition_key_index = 1 [features.field_presence = LEGACY_REQUIRED];
+  bytes  data                = 3 [features.field_presence = LEGACY_REQUIRED];
 }

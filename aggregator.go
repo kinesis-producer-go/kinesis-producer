@@ -79,10 +79,10 @@ func (a *Aggregator) CalculateAddSize(data []byte) int {
 
 // Put record using `data`. This method is thread-safe.
 func (a *Aggregator) Put(data []byte, addSize int) {
-	a.buf = append(a.buf, &Record{
+	a.buf = append(a.buf, Record_builder{
 		PartitionKeyIndex: proto.Uint64(0),
 		Data:              data,
-	})
+	}.Build())
 
 	a.nbytes += addSize
 }
@@ -97,10 +97,10 @@ func (a *Aggregator) Drain() (*ktypes.PutRecordsRequestEntry, error) {
 	}
 
 	partitionKey := RandPartitionKey()
-	aggregatedRecordData, err := proto.Marshal(&AggregatedRecord{
+	aggregatedRecordData, err := proto.Marshal(AggregatedRecord_builder{
 		PartitionKeyTable: []string{partitionKey},
 		Records:           a.buf,
-	})
+	}.Build())
 	if err != nil {
 		return nil, err
 	}
@@ -138,11 +138,11 @@ func extractRecords(entry *ktypes.PutRecordsRequestEntry) (out []ktypes.PutRecor
 	if err != nil {
 		return
 	}
-	for i := range dest.Records {
-		r := dest.Records[i]
+	for i := range dest.GetRecords() {
+		r := dest.GetRecords()[i]
 		out = append(out, ktypes.PutRecordsRequestEntry{
 			Data:         r.GetData(),
-			PartitionKey: &dest.PartitionKeyTable[r.GetPartitionKeyIndex()],
+			PartitionKey: &dest.GetPartitionKeyTable()[r.GetPartitionKeyIndex()],
 		})
 	}
 	return
