@@ -2,16 +2,28 @@ package producer
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log"
 	"os"
+	"testing"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/kinesis"
+	"github.com/go-faker/faker/v4"
 )
 
-func ExampleProducer() {
+type Data struct {
+	GroupID  string `json:"group_id" faker:"oneof: one, two, three"`
+	Word     string `json:"word" faker:"word"`
+	TimeUnix int64  `json:"time_unix"`
+}
+
+func TestExample(t *testing.T) {
+	t.Skipf("Skip by default")
+
 	logger := &StdLogger{log.New(os.Stdout, "", log.LstdFlags)}
 	cfg, _ := config.LoadDefaultConfig(context.TODO())
 	client := kinesis.NewFromConfig(cfg)
@@ -20,6 +32,7 @@ func ExampleProducer() {
 		BacklogCount: 2000,
 		Client:       client,
 		Logger:       logger,
+		Verbose:      true,
 	})
 
 	pr.Start()
@@ -33,14 +46,26 @@ func ExampleProducer() {
 	}()
 
 	go func() {
-		for i := 0; i < 5000; i++ {
-			err := pr.Put([]byte("foo"))
+		for i := 0; i < 50; i++ {
+			data := &Data{}
+			err := faker.FakeData(&data)
+			if err != nil {
+				fmt.Println(data)
+			}
+			data.TimeUnix = time.Now().Unix()
+			jsonBytes, err := json.Marshal(data)
+			if err != nil {
+				panic(err)
+			}
+			err = pr.Put(jsonBytes)
+			fmt.Printf("%s\n", jsonBytes)
 			if err != nil {
 				logger.Error("error producing", err)
 			}
+			time.Sleep(1 * time.Second)
 		}
 	}()
 
-	time.Sleep(3 * time.Second)
+	time.Sleep(1 * time.Minute)
 	pr.Stop()
 }
