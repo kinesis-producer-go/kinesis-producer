@@ -79,10 +79,9 @@ func (a *Aggregator) CalculateAddSize(data []byte) int {
 
 // Put record using `data`. This method is thread-safe.
 func (a *Aggregator) Put(data []byte, addSize int) {
-	zero := uint64(0)
 	a.buf = append(a.buf, &Record{
+		PartitionKeyIndex: proto.Uint64(0),
 		Data:              data,
-		PartitionKeyIndex: &zero,
 	})
 
 	a.nbytes += addSize

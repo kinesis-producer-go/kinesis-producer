@@ -5,18 +5,14 @@ import (
 	"strconv"
 	"sync"
 	"testing"
-)
 
-func assert(t *testing.T, val bool, msg string) {
-	if !val {
-		t.Error(msg)
-	}
-}
+	"github.com/stretchr/testify/assert"
+)
 
 func TestSizeAndCount(t *testing.T) {
 	a := NewAggregator()
-	assert(t, a.Count() == 0, "size and count should equal to 0 at the beginning")
-	assert(t, a.Size() == a.calculateInitialSize(), "size should equal to initial size at the beginning")
+	assert.Equal(t, a.Count(), 0, "size and count should equal to 0 at the beginning")
+	assert.Equal(t, a.Size(), a.calculateInitialSize(), "size should equal to initial size at the beginning")
 
 	for i := 0; i < 2000; i++ {
 		data := []byte("hello")
@@ -30,8 +26,8 @@ func TestSizeAndCount(t *testing.T) {
 		calSize := a.Size()
 		entry, _ := a.Drain()
 
-		assert(t, calCount == n, "count should be equal to the number of Put calls")
-		assert(t, calSize == len(entry.Data), "size should equal to the serialized data")
+		assert.Equal(t, calCount, n, "count should be equal to the number of Put calls")
+		assert.Equal(t, calSize, len(entry.Data), "size should equal to the serialized data")
 	}
 }
 
@@ -52,24 +48,24 @@ func TestAggregation(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	assert(t, isAggregated(record), "should return an agregated record")
+	assert.True(t, isAggregated(record), "should return an agregated record")
 	records := extractRecords(record)
 	for i := 0; i < n; i++ {
 		c := strconv.Itoa(i)
 		found := false
 		for _, record := range records {
 			if string(record.Data) == "hello-"+c {
-				assert(t, string(record.Data) == "hello-"+c, "`Data` field contains invalid value")
+				assert.Equal(t, string(record.Data), "hello-"+c, "`Data` field contains invalid value")
 				found = true
 			}
 		}
-		assert(t, found, "record not found after extracting: "+c)
+		assert.True(t, found, "record not found after extracting: "+c)
 	}
 }
 
 func TestDrainEmptyAggregator(t *testing.T) {
 	a := NewAggregator()
 	entry, err := a.Drain()
-	assert(t, entry == nil, "should return an nil entry")
-	assert(t, err == nil, "should not return an error")
+	assert.Nil(t, entry, "should return an nil entry")
+	assert.Nil(t, err, "should not return an error")
 }
