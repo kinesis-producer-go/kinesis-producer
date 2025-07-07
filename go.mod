@@ -10,9 +10,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/kinesis v1.35.3
 	github.com/go-faker/faker/v4 v4.6.1
 	github.com/jpillora/backoff v1.0.0
-	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.10.0
-	go.uber.org/zap v1.27.0
 	google.golang.org/protobuf v1.36.6
 )
 
@@ -31,8 +29,6 @@ require (
 	github.com/aws/smithy-go v1.22.4 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/sys v0.33.0 // indirect
 	golang.org/x/text v0.26.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

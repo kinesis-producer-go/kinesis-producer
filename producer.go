@@ -94,7 +94,7 @@ func (p *Producer) Put(data []byte) error {
 	)
 	if needToDrain {
 		if record, err = p.aggregator.Drain(); err != nil {
-			p.Logger.Error("drain aggregator", err)
+			p.Logger.Error("drain aggregator", "error", err)
 		}
 	}
 	p.aggregator.Put(data, addSize)
@@ -131,7 +131,7 @@ func (p *Producer) NotifyFailures() <-chan *FailureRecord {
 
 // Start the producer
 func (p *Producer) Start() {
-	p.Logger.Info("starting producer", LogValue{"stream", p.StreamName})
+	p.Logger.Info("starting producer", "stream", aws.ToString(p.StreamName), "streamARN", aws.ToString(p.StreamARN))
 	go p.loop()
 }
 
@@ -140,7 +140,7 @@ func (p *Producer) Stop() {
 	p.Lock()
 	p.stopped = true
 	p.Unlock()
-	p.Logger.Info("stopping producer", LogValue{"backlog", len(p.records)})
+	p.Logger.Info("stopping producer", "backlog", len(p.records))
 
 	// drain
 	if record, ok := p.drainIfNeed(); ok {
@@ -227,7 +227,7 @@ func (p *Producer) drainIfNeed() (*ktypes.PutRecordsRequestEntry, bool) {
 		record, err := p.aggregator.Drain()
 		p.Unlock()
 		if err != nil {
-			p.Logger.Error("drain aggregator", err)
+			p.Logger.Error("drain aggregator", "error", err)
 		} else {
 			return record, true
 		}
@@ -245,7 +245,7 @@ func (p *Producer) flush(records []ktypes.PutRecordsRequestEntry, reason string)
 	defer p.semaphore.release()
 
 	for {
-		p.Logger.Info("flushing records", LogValue{"reason", reason}, LogValue{"records", len(records)})
+		p.Logger.Info("flushing records", "reason", reason, "records", len(records))
 		out, err := p.Client.PutRecords(context.Background(), &k.PutRecordsInput{
 			StreamARN:  p.StreamARN,
 			StreamName: p.StreamName,
@@ -253,7 +253,7 @@ func (p *Producer) flush(records []ktypes.PutRecordsRequestEntry, reason string)
 		})
 
 		if err != nil {
-			p.Logger.Error("flush", err)
+			p.Logger.Error("flush", "error", err)
 			p.RLock()
 			notify := p.notify
 			p.RUnlock()
@@ -265,15 +265,11 @@ func (p *Producer) flush(records []ktypes.PutRecordsRequestEntry, reason string)
 
 		if p.Verbose {
 			for i, r := range out.Records {
-				values := make([]LogValue, 2)
 				if r.ErrorCode != nil {
-					values[0] = LogValue{"ErrorCode", *r.ErrorCode}
-					values[1] = LogValue{"ErrorMessage", *r.ErrorMessage}
+					p.Logger.Info(fmt.Sprintf("Result[%d]", i), "ErrorCode", aws.ToString(r.ErrorCode), "ErrorMessage", aws.ToString(r.ErrorMessage))
 				} else {
-					values[0] = LogValue{"ShardId", *r.ShardId}
-					values[1] = LogValue{"SequenceNumber", *r.SequenceNumber}
+					p.Logger.Info(fmt.Sprintf("Result[%d]", i), "ShardId", aws.ToString(r.ShardId), "SequenceNumber", aws.ToString(r.SequenceNumber))
 				}
-				p.Logger.Info(fmt.Sprintf("Result[%d]", i), values...)
 			}
 		}
 
@@ -284,11 +280,7 @@ func (p *Producer) flush(records []ktypes.PutRecordsRequestEntry, reason string)
 
 		duration := b.Duration()
 
-		p.Logger.Info(
-			"put failures",
-			LogValue{"failures", failed},
-			LogValue{"backoff", duration.String()},
-		)
+		p.Logger.Info("put failures", "failures", failed, "backoff", duration.String())
 		time.Sleep(duration)
 
 		// change the logging state for the next itertion

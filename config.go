@@ -2,8 +2,7 @@ package producer
 
 import (
 	"context"
-	"log"
-	"os"
+	"log/slog"
 	"regexp"
 	"strings"
 	"time"
@@ -23,7 +22,6 @@ const (
 	defaultAggregationSize = 51200 // 50k
 	defaultMaxConnections  = 24
 	defaultFlushInterval   = 5 * time.Second
-	partitionKeyIndexSize  = 8
 )
 
 // Putter is the interface that wraps the KinesisAPI.PutRecords method.
@@ -64,8 +62,8 @@ type Config struct {
 	// Number of requests to sent concurrently. Default to 24.
 	MaxConnections int
 
-	// Logger is the logger used. Default to producer.Logger.
-	Logger Logger
+	// Logger is the logger used. Default to slog.Default().
+	Logger *slog.Logger
 
 	// Enabling verbose logging. Default to false.
 	Verbose bool
@@ -77,7 +75,7 @@ type Config struct {
 // defaults for configuration
 func (c *Config) defaults() {
 	if c.Logger == nil {
-		c.Logger = &StdLogger{log.New(os.Stdout, "", log.LstdFlags)}
+		c.Logger = slog.Default()
 	}
 	if c.BatchCount == 0 {
 		c.BatchCount = maxRecordsPerRequest

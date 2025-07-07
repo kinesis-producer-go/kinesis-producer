@@ -4,8 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
-	"os"
+	"log/slog"
 	"testing"
 	"time"
 
@@ -24,7 +23,7 @@ type Data struct {
 func TestExample(t *testing.T) {
 	t.Skipf("Skip by default")
 
-	logger := &StdLogger{log.New(os.Stdout, "", log.LstdFlags)}
+	logger := slog.Default()
 	cfg, _ := config.LoadDefaultConfig(context.TODO())
 	client := kinesis.NewFromConfig(cfg)
 	pr := New(&Config{
@@ -41,7 +40,7 @@ func TestExample(t *testing.T) {
 	go func() {
 		for r := range pr.NotifyFailures() {
 			// r contains `Data`, `PartitionKey` and `Error()`
-			logger.Error("detected put failure", r.error)
+			logger.Error("detected put failure", "error", r.error)
 		}
 	}()
 
@@ -60,7 +59,7 @@ func TestExample(t *testing.T) {
 			err = pr.Put(jsonBytes)
 			fmt.Printf("%s\n", jsonBytes)
 			if err != nil {
-				logger.Error("error producing", err)
+				logger.Error("error producing", "error", err)
 			}
 			time.Sleep(1 * time.Second)
 		}
