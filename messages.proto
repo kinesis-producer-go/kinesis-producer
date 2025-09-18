@@ -1,11 +1,8 @@
 // protoc --go_out=. --go_opt=paths=source_relative messages.proto
 
-edition = "2023";
+edition = "2024";
 package producer;
 
-import "google/protobuf/go_features.proto";
-
-option features.(pb.go).api_level = API_OPAQUE;
 option go_package = "./producer";
 
 message AggregatedRecord {
