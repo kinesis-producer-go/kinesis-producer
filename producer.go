@@ -17,6 +17,7 @@ import (
 	k "github.com/aws/aws-sdk-go-v2/service/kinesis"
 	ktypes "github.com/aws/aws-sdk-go-v2/service/kinesis/types"
 	"github.com/jpillora/backoff"
+	"golang.org/x/sync/semaphore"
 )
 
 // Errors
@@ -30,7 +31,7 @@ type Producer struct {
 	sync.RWMutex
 	*Config
 	aggregator *Aggregator
-	semaphore  semaphore
+	semaphore  *semaphore.Weighted
 	records    chan *ktypes.PutRecordsRequestEntry
 	failure    chan *FailureRecord
 	done       chan struct{}
@@ -50,7 +51,7 @@ func New(config *Config) *Producer {
 		Config:     config,
 		done:       make(chan struct{}),
 		records:    make(chan *ktypes.PutRecordsRequestEntry, config.BacklogCount),
-		semaphore:  make(chan struct{}, config.MaxConnections),
+		semaphore:  semaphore.NewWeighted(int64(config.MaxConnections)),
 		aggregator: NewAggregator(),
 	}
 }
@@ -151,7 +152,8 @@ func (p *Producer) Stop() {
 
 	// wait
 	<-p.done
-	p.semaphore.wait()
+	// Wait for all flush goroutines to complete by acquiring all permits
+	_ = p.semaphore.Acquire(context.Background(), int64(p.MaxConnections))
 
 	// close the failures channel if we notify
 	p.RLock()
@@ -170,7 +172,7 @@ func (p *Producer) loop() {
 	tick := time.NewTicker(p.FlushInterval)
 
 	flush := func(msg string) {
-		p.semaphore.acquire()
+		_ = p.semaphore.Acquire(context.Background(), 1)
 		go p.flush(buf, msg)
 		buf = nil
 		size = 0
@@ -242,7 +244,7 @@ func (p *Producer) flush(records []ktypes.PutRecordsRequestEntry, reason string)
 		Jitter: true,
 	}
 
-	defer p.semaphore.release()
+	defer p.semaphore.Release(1)
 
 	for {
 		p.Logger.Info("flushing records", "reason", reason, "records", len(records))
