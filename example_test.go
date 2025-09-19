@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"os"
 	"testing"
 	"time"
 
@@ -23,7 +24,7 @@ type Data struct {
 func TestExample(t *testing.T) {
 	t.Skipf("Skip by default")
 
-	logger := slog.Default()
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	cfg, _ := config.LoadDefaultConfig(context.TODO())
 	client := kinesis.NewFromConfig(cfg)
 	pr := New(&Config{
