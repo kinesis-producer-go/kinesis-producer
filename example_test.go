@@ -27,11 +27,14 @@ func TestExample(t *testing.T) {
 	cfg, _ := config.LoadDefaultConfig(context.TODO())
 	client := kinesis.NewFromConfig(cfg)
 	pr := New(&Config{
-		StreamName:   aws.String("test"),
-		BacklogCount: 2000,
-		Client:       client,
-		Logger:       logger,
-		Verbose:      true,
+		StreamName:          aws.String("test"),
+		BacklogCount:        2000,
+		Client:              client,
+		Logger:              logger,
+		Verbose:             true,
+		AggregateBatchCount: 10,              // Aggregate max 10 records per batch
+		AggregateBatchSize:  1024,            // Aggregate when reaching 1KB
+		FlushInterval:       1 * time.Second, // Flush every 1 second for testing
 	})
 
 	pr.Start()
@@ -45,7 +48,7 @@ func TestExample(t *testing.T) {
 	}()
 
 	go func() {
-		for i := 0; i < 50; i++ {
+		for i := 0; i < 5000; i++ {
 			data := &Data{}
 			err := faker.FakeData(&data)
 			if err != nil {
@@ -61,7 +64,7 @@ func TestExample(t *testing.T) {
 			if err != nil {
 				logger.Error("error producing", "error", err)
 			}
-			time.Sleep(1 * time.Second)
+			time.Sleep(1 * time.Millisecond)
 		}
 	}()
 

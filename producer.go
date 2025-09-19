@@ -9,7 +9,6 @@ package producer
 import (
 	"context"
 	"errors"
-	"fmt"
 	"sync"
 	"time"
 
@@ -88,7 +87,7 @@ func (p *Producer) Put(data []byte) error {
 	addSize := p.aggregator.CalculateAddSize(data)
 	// Check if the aggregator needs to be drained using a more precise method
 	// that considers the exact serialized size impact of adding the new data
-	needToDrain := p.aggregator.Size()+addSize > maxRecordSize || p.aggregator.Count() >= p.AggregateBatchCount
+	needToDrain := p.aggregator.Size()+addSize > p.AggregateBatchSize || p.aggregator.Count() >= p.AggregateBatchCount
 	var (
 		record *ktypes.PutRecordsRequestEntry
 		err    error
@@ -268,9 +267,9 @@ func (p *Producer) flush(records []ktypes.PutRecordsRequestEntry, reason string)
 		if p.Verbose {
 			for i, r := range out.Records {
 				if r.ErrorCode != nil {
-					p.Logger.Info(fmt.Sprintf("Result[%d]", i), "ErrorCode", aws.ToString(r.ErrorCode), "ErrorMessage", aws.ToString(r.ErrorMessage))
+					p.Logger.Info("PutRecords error item", "index", i, "ErrorCode", aws.ToString(r.ErrorCode), "ErrorMessage", aws.ToString(r.ErrorMessage))
 				} else {
-					p.Logger.Info(fmt.Sprintf("Result[%d]", i), "ShardId", aws.ToString(r.ShardId), "SequenceNumber", aws.ToString(r.SequenceNumber))
+					p.Logger.Info("PutRecords success item", "index", i, "ShardId", aws.ToString(r.ShardId), "SequenceNumber", aws.ToString(r.SequenceNumber))
 				}
 			}
 		}

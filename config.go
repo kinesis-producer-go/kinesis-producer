@@ -17,7 +17,7 @@ const (
 	maxRecordSize          = 1 << 20 // 1MiB
 	maxRequestSize         = 5 << 20 // 5MiB
 	maxRecordsPerRequest   = 500
-	maxAggregationSize     = 1048576 // 1MiB
+	maxAggregationSize     = 1 << 20 // 1MiB
 	maxAggregationCount    = 4294967295
 	defaultAggregationSize = 51200 // 50k
 	defaultMaxConnections  = 24
