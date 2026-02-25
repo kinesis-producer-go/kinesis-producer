@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/md5"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	ktypes "github.com/aws/aws-sdk-go-v2/service/kinesis/types"
 	"google.golang.org/protobuf/encoding/protowire"
 	"google.golang.org/protobuf/proto"
@@ -115,7 +114,7 @@ func (a *Aggregator) Drain() (*ktypes.PutRecordsRequestEntry, error) {
 
 	entry := &ktypes.PutRecordsRequestEntry{
 		Data:         buffer.Bytes(),
-		PartitionKey: aws.String(partitionKey),
+		PartitionKey: new(partitionKey),
 	}
 	a.clear()
 	return entry, nil

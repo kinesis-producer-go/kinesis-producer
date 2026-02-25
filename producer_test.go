@@ -6,7 +6,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	k "github.com/aws/aws-sdk-go-v2/service/kinesis"
 	ktypes "github.com/aws/aws-sdk-go-v2/service/kinesis/types"
 )
@@ -63,7 +62,7 @@ var testCases = []testCase{
 				{
 					Error: nil,
 					Response: &k.PutRecordsOutput{
-						FailedRecordCount: aws.Int32(0),
+						FailedRecordCount: new(int32(0)),
 					},
 				},
 			}},
@@ -81,13 +80,13 @@ var testCases = []testCase{
 				{
 					Error: nil,
 					Response: &k.PutRecordsOutput{
-						FailedRecordCount: aws.Int32(0),
+						FailedRecordCount: new(int32(0)),
 					},
 				},
 				{
 					Error: nil,
 					Response: &k.PutRecordsOutput{
-						FailedRecordCount: aws.Int32(0),
+						FailedRecordCount: new(int32(0)),
 					},
 				},
 			}},
@@ -106,17 +105,17 @@ var testCases = []testCase{
 				{
 					Error: nil,
 					Response: &k.PutRecordsOutput{
-						FailedRecordCount: aws.Int32(1),
+						FailedRecordCount: new(int32(1)),
 						Records: []ktypes.PutRecordsResultEntry{
-							{SequenceNumber: aws.String("3"), ShardId: aws.String("1")},
-							{ErrorCode: aws.String("400")},
+							{SequenceNumber: new("3"), ShardId: new("1")},
+							{ErrorCode: new("400")},
 						},
 					},
 				},
 				{
 					Error: nil,
 					Response: &k.PutRecordsOutput{
-						FailedRecordCount: aws.Int32(0),
+						FailedRecordCount: new(int32(0)),
 					},
 				},
 			}},
@@ -135,13 +134,13 @@ var testCases = []testCase{
 				{
 					Error: nil,
 					Response: &k.PutRecordsOutput{
-						FailedRecordCount: aws.Int32(0),
+						FailedRecordCount: new(int32(0)),
 					},
 				},
 				{
 					Error: nil,
 					Response: &k.PutRecordsOutput{
-						FailedRecordCount: aws.Int32(0),
+						FailedRecordCount: new(int32(0)),
 					},
 				},
 			}},
@@ -154,7 +153,7 @@ var testCases = []testCase{
 
 func TestProducer(t *testing.T) {
 	for _, test := range testCases {
-		test.config.StreamName = aws.String("foo")
+		test.config.StreamName = new("foo")
 		test.config.MaxConnections = 1
 		test.config.Client = test.putter
 		p := New(test.config)
@@ -181,7 +180,7 @@ func TestProducer(t *testing.T) {
 func TestNotify(t *testing.T) {
 	kError := errors.New("ResourceNotFoundException: Stream foo under account X not found")
 	p := New(&Config{
-		StreamName:          aws.String("foo"),
+		StreamName:          new("foo"),
 		MaxConnections:      1,
 		BatchCount:          1,
 		AggregateBatchCount: 10,

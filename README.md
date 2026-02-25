@@ -37,7 +37,7 @@ func main() {
 	}
 	client := kinesis.NewFromConfig(cfg)
 	pr := producer.New(&producer.Config{
-		StreamName:   aws.String("test"),
+		StreamName:   new("test"),
 		BacklogCount: 2000,
 		Client:       client,
 	})
@@ -78,7 +78,7 @@ func main() {
         }),
     )
     pr := producer.New(&producer.Config{
-        StreamName:   aws.String("test"),
+        StreamName:   new("test"),
         BacklogCount: 2000,
         Client:       client,
         Logger:       logger,
@@ -98,7 +98,7 @@ import (
     logger := slog.New(sloglogrus.Option{Level: slog.LevelError, Logger: logrusLogger}.NewLogrusHandler())
 
     pr := producer.New(&producer.Config{
-        StreamName:   aws.String("test"),
+        StreamName:   new("test"),
         BacklogCount: 2000,
         Client:       client,
         Logger:       logger,

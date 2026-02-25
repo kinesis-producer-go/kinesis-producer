@@ -77,7 +77,7 @@ func (p *Producer) Put(data []byte) error {
 	if len(data) > p.AggregateBatchSize {
 		p.records <- &ktypes.PutRecordsRequestEntry{
 			Data:         data,
-			PartitionKey: aws.String(RandPartitionKey()),
+			PartitionKey: new(RandPartitionKey()),
 		}
 		return nil
 	}

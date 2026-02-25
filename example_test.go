@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/kinesis"
 	"github.com/go-faker/faker/v4"
@@ -28,7 +27,7 @@ func TestExample(t *testing.T) {
 	cfg, _ := config.LoadDefaultConfig(context.TODO())
 	client := kinesis.NewFromConfig(cfg)
 	pr := New(&Config{
-		StreamName:          aws.String("test"),
+		StreamName:          new("test"),
 		BacklogCount:        2000,
 		Client:              client,
 		Logger:              logger,

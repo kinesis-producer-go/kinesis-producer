@@ -2,13 +2,11 @@ package producer
 
 import (
 	"testing"
-
-	"github.com/aws/aws-sdk-go-v2/aws"
 )
 
 func TestConfig_ValidStreamArn(t *testing.T) {
 	c := &Config{
-		StreamARN: aws.String("arn:aws:kinesis:us-east-1:012345678901:stream/test-stream-name"),
+		StreamARN: new("arn:aws:kinesis:us-east-1:012345678901:stream/test-stream-name"),
 	}
 	c.defaults()
 	t.Logf("TestConfig_ValidStreamArn success")
@@ -16,7 +14,7 @@ func TestConfig_ValidStreamArn(t *testing.T) {
 
 func TestConfig_InvalidStreamArn(t *testing.T) {
 	c := &Config{
-		StreamARN: aws.String("test-stream-name"),
+		StreamARN: new("test-stream-name"),
 	}
 	defer func() {
 		r := recover()
@@ -31,7 +29,7 @@ func TestConfig_InvalidStreamArn(t *testing.T) {
 
 func TestConfig_ValidStreamName(t *testing.T) {
 	c := &Config{
-		StreamName: aws.String("test-stream-name"),
+		StreamName: new("test-stream-name"),
 	}
 	c.defaults()
 	t.Logf("TestConfig_ValidStreamName success")
@@ -39,7 +37,7 @@ func TestConfig_ValidStreamName(t *testing.T) {
 
 func TestConfig_InvalidStreamName(t *testing.T) {
 	c := &Config{
-		StreamName: aws.String("test`-stream/name"),
+		StreamName: new("test`-stream/name"),
 	}
 	defer func() {
 		r := recover()
@@ -54,8 +52,8 @@ func TestConfig_InvalidStreamName(t *testing.T) {
 
 func TestConfig_BothStreamArnAndName(t *testing.T) {
 	c := &Config{
-		StreamARN:  aws.String("arn:aws:kinesis:us-east-1:012345678901:stream/test-stream-name"),
-		StreamName: aws.String("test-stream-name"),
+		StreamARN:  new("arn:aws:kinesis:us-east-1:012345678901:stream/test-stream-name"),
+		StreamName: new("test-stream-name"),
 	}
 	c.defaults()
 	t.Logf("TestConfig_BothStreamArnAndName success")
@@ -76,8 +74,8 @@ func TestConfig_EmptyStreamArnAndName(t *testing.T) {
 
 func TestConfig_NoMatchStreamArnAndName(t *testing.T) {
 	c := &Config{
-		StreamARN:  aws.String("arn:aws:kinesis:us-east-1:012345678901:stream/test-stream-name"),
-		StreamName: aws.String("test-stream-name-2"),
+		StreamARN:  new("arn:aws:kinesis:us-east-1:012345678901:stream/test-stream-name"),
+		StreamName: new("test-stream-name-2"),
 	}
 	defer func() {
 		r := recover()
