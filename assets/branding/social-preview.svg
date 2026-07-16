@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640">
+  <rect width="1280" height="640" fill="#F4F6FA"/>
+  <circle cx="215" cy="320" r="218" fill="#E9F8FC"/>
+  <circle cx="102" cy="116" r="56" fill="#ECE9FB"/>
+  <circle cx="425" cy="518" r="34" fill="#FFF1D5"/>
+
+  <g transform="translate(12 33) scale(1.08)">
+    <circle cx="82" cy="150" r="25" fill="#00A9D2"/>
+    <circle cx="82" cy="256" r="25" fill="#00A9D2"/>
+    <circle cx="82" cy="362" r="25" fill="#00A9D2"/>
+    <path d="M107 150H153C190 150 197 219 239 242" fill="none" stroke="#00A9D2" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M107 256H239" fill="none" stroke="#00A9D2" stroke-width="32" stroke-linecap="round"/>
+    <path d="M107 362H153C190 362 197 293 239 270" fill="none" stroke="#00A9D2" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="232" y="232" width="48" height="48" rx="13" fill="#F2A93B" transform="rotate(45 256 256)"/>
+    <path d="M292 256H372" fill="none" stroke="#6750DC" stroke-width="40" stroke-linecap="round"/>
+    <path d="M358 194L446 256L358 318Z" fill="#6750DC"/>
+  </g>
+
+  <g transform="translate(548 0)">
+    <text x="0" y="153" fill="#6750DC" font-family="DejaVu Sans, sans-serif" font-size="18" font-weight="700" letter-spacing="2.6">KPL-COMPATIBLE · GO</text>
+    <text x="0" y="232" fill="#172033" font-family="DejaVu Sans, sans-serif" font-size="59" font-weight="700">kinesis-producer</text>
+    <text x="0" y="301" fill="#344054" font-family="DejaVu Sans, sans-serif" font-size="29" font-weight="700">Batch records for Amazon Kinesis</text>
+    <text x="0" y="342" fill="#667085" font-family="DejaVu Sans, sans-serif" font-size="24">using the KPL aggregation format — in Go.</text>
+
+    <g transform="translate(0 399)">
+      <rect width="208" height="48" rx="24" fill="#FFFFFF" stroke="#D7DEE9" stroke-width="2"/>
+      <circle cx="25" cy="24" r="7" fill="#00A9D2"/>
+      <text x="43" y="30" fill="#344054" font-family="DejaVu Sans, sans-serif" font-size="16" font-weight="700">KPL aggregation</text>
+    </g>
+    <g transform="translate(222 399)">
+      <rect width="240" height="48" rx="24" fill="#FFFFFF" stroke="#D7DEE9" stroke-width="2"/>
+      <circle cx="25" cy="24" r="7" fill="#6750DC"/>
+      <text x="43" y="30" fill="#344054" font-family="DejaVu Sans, sans-serif" font-size="16" font-weight="700">AWS SDK for Go V2</text>
+    </g>
+    <g transform="translate(476 399)">
+      <rect width="218" height="48" rx="24" fill="#FFFFFF" stroke="#D7DEE9" stroke-width="2"/>
+      <circle cx="25" cy="24" r="7" fill="#F2A93B"/>
+      <text x="43" y="30" fill="#344054" font-family="DejaVu Sans, sans-serif" font-size="16" font-weight="700">No JVM · No CGo</text>
+    </g>
+
+    <text x="0" y="522" fill="#667085" font-family="DejaVu Sans Mono, monospace" font-size="18">github.com/kinesis-producer-go/kinesis-producer</text>
+  </g>
+
+  <rect y="630" width="426" height="10" fill="#00A9D2"/>
+  <rect x="426" y="630" width="428" height="10" fill="#F2A93B"/>
+  <rect x="854" y="630" width="426" height="10" fill="#6750DC"/>
+</svg>

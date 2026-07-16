@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/branding/logo.svg" width="144" alt="kinesis-producer logo">
+</p>
+
 # Amazon kinesis producer [![CI status][ci-image]][ci-url] [![License][license-image]][license-url] [![Go Reference][godoc-img]][godoc-url]
 > A KPL-like batch producer for Amazon Kinesis built on top of the official AWS SDK for Go V2
 and using the same aggregation format that [KPL][kpl-url] use.  
