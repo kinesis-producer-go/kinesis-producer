@@ -1,10 +1,10 @@
-# Amazon kinesis producer [![CI status][ci-image]][ci-url] [![License][license-image]][license-url] [![GoDoc][godoc-img]][godoc-url]
+# Amazon kinesis producer [![CI status][ci-image]][ci-url] [![License][license-image]][license-url] [![Go Reference][godoc-img]][godoc-url]
 > A KPL-like batch producer for Amazon Kinesis built on top of the official AWS SDK for Go V2
 and using the same aggregation format that [KPL][kpl-url] use.  
 
 ### Useful links
 - [Documentation site][docs-url]
-- [GoDoc][godoc-url]
+- [Go Reference][godoc-url]
 - [Aggregation format][aggregation-format-url]
 - [Considerations When Using KPL Aggregation][kpl-aggregation]
 - [Consumer De-aggregation][de-aggregation]
@@ -110,8 +110,8 @@ import (
 [MIT][license-url]
 
 [docs-url]: https://kinesis-producer-go.github.io/
-[godoc-url]: https://godoc.org/github.com/kinesis-producer-go/kinesis-producer
-[godoc-img]: https://img.shields.io/badge/godoc-reference-blue.svg?style=flat-square
+[godoc-url]: https://pkg.go.dev/github.com/kinesis-producer-go/kinesis-producer
+[godoc-img]: https://pkg.go.dev/badge/github.com/kinesis-producer-go/kinesis-producer.svg
 [kpl-url]: https://github.com/awslabs/amazon-kinesis-producer
 [de-aggregation]: http://docs.aws.amazon.com/kinesis/latest/dev/kinesis-kpl-consumer-deaggregation.html
 [kpl-aggregation]: http://docs.aws.amazon.com/kinesis/latest/dev/kinesis-producer-adv-aggregation.html
