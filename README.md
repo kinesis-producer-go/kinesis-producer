@@ -3,7 +3,8 @@
 and using the same aggregation format that [KPL][kpl-url] use.  
 
 ### Useful links
-- [Documentation][godoc-url]
+- [Documentation site][docs-url]
+- [GoDoc][godoc-url]
 - [Aggregation format][aggregation-format-url]
 - [Considerations When Using KPL Aggregation][kpl-aggregation]
 - [Consumer De-aggregation][de-aggregation]
@@ -108,6 +109,7 @@ import (
 ### License
 [MIT][license-url]
 
+[docs-url]: https://kinesis-producer-go.github.io/
 [godoc-url]: https://godoc.org/github.com/kinesis-producer-go/kinesis-producer
 [godoc-img]: https://img.shields.io/badge/godoc-reference-blue.svg?style=flat-square
 [kpl-url]: https://github.com/awslabs/amazon-kinesis-producer
