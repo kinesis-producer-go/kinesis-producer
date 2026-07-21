@@ -14,10 +14,10 @@ func TestSizeAndCount(t *testing.T) {
 	assert.Equal(t, a.Count(), 0, "size and count should equal to 0 at the beginning")
 	assert.Equal(t, a.Size(), a.calculateInitialSize(), "size should equal to initial size at the beginning")
 
-	for i := 0; i < 2000; i++ {
+	for range 2000 {
 		data := []byte("hello")
 		n := rand.Intn(1000) + 1
-		for j := 0; j < n; j++ {
+		for range n {
 			addSize := a.CalculateAddSize(data)
 			a.Put(data, addSize)
 		}
@@ -36,7 +36,7 @@ func TestAggregation(t *testing.T) {
 	a := NewAggregator()
 	n := 50
 	wg.Add(n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		c := strconv.Itoa(i)
 		data := []byte("hello-" + c)
 		addSize := a.CalculateAddSize(data)
@@ -50,7 +50,7 @@ func TestAggregation(t *testing.T) {
 	}
 	assert.True(t, isAggregated(record), "should return an agregated record")
 	records := extractRecords(record)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		c := strconv.Itoa(i)
 		found := false
 		for _, record := range records {

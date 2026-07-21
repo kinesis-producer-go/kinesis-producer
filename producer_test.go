@@ -45,7 +45,7 @@ type testCase struct {
 }
 
 func genBulk(n int, s string) (ret []string) {
-	for i := 0; i < n; i++ {
+	for range n {
 		ret = append(ret, s)
 	}
 	return

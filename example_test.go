@@ -48,7 +48,7 @@ func TestExample(t *testing.T) {
 	}()
 
 	go func() {
-		for i := 0; i < 5000; i++ {
+		for range 5000 {
 			data := &Data{}
 			err := faker.FakeData(&data)
 			if err != nil {
