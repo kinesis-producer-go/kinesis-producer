@@ -23,6 +23,7 @@ import (
 var (
 	ErrStoppedProducer    = errors.New("Unable to Put record. Producer is already stopped")
 	ErrRecordSizeExceeded = errors.New("Data must be less than or equal to 1MB in size")
+	ErrNilData            = errors.New("Data must not be nil, use an empty slice for a zero-length record")
 )
 
 // Producer batches records.
@@ -68,6 +69,10 @@ func (p *Producer) Put(data []byte) error {
 	p.RUnlock()
 	if stopped {
 		return ErrStoppedProducer
+	}
+	// nil means a missing payload, not an empty one; protobuf and the Kinesis API both reject it
+	if data == nil {
+		return ErrNilData
 	}
 	if len(data) > maxRecordSize {
 		return ErrRecordSizeExceeded

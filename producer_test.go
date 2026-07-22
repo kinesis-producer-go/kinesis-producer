@@ -177,6 +177,59 @@ func TestProducer(t *testing.T) {
 	}
 }
 
+func TestPutNilData(t *testing.T) {
+	m := &clientMock{
+		incoming: make(map[int][]string),
+		responses: []responseMock{
+			{Response: &k.PutRecordsOutput{FailedRecordCount: new(int32(0))}},
+		},
+	}
+	p := New(&Config{
+		StreamName:          new("foo"),
+		MaxConnections:      1,
+		BatchCount:          1,
+		AggregateBatchCount: 1,
+		Client:              m,
+	})
+	p.Start()
+	if err := p.Put(nil); err != ErrNilData {
+		t.Errorf("Put(nil) returned %v, want ErrNilData", err)
+	}
+	// the rejected nil must not poison the aggregator: a valid record still flows end-to-end
+	if err := p.Put([]byte("still-alive")); err != nil {
+		t.Errorf("Put after Put(nil) returned %v, want nil", err)
+	}
+	p.Stop()
+	if got := len(m.incoming[0]); got != 1 {
+		t.Errorf("delivered %d records after Put(nil), want 1", got)
+	}
+}
+
+func TestPutEmptyData(t *testing.T) {
+	m := &clientMock{
+		incoming: make(map[int][]string),
+		responses: []responseMock{
+			{Response: &k.PutRecordsOutput{FailedRecordCount: new(int32(0))}},
+		},
+	}
+	p := New(&Config{
+		StreamName:          new("foo"),
+		MaxConnections:      1,
+		BatchCount:          1,
+		AggregateBatchCount: 1,
+		Client:              m,
+	})
+	p.Start()
+	// an explicit empty slice is a legal zero-length record (Kinesis Data min length is 0)
+	if err := p.Put([]byte{}); err != nil {
+		t.Errorf("Put([]byte{}) returned %v, want nil", err)
+	}
+	p.Stop()
+	if got := len(m.incoming[0]); got != 1 {
+		t.Errorf("delivered %d records for empty payload, want 1", got)
+	}
+}
+
 func TestNotify(t *testing.T) {
 	kError := errors.New("ResourceNotFoundException: Stream foo under account X not found")
 	p := New(&Config{
