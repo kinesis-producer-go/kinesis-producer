@@ -125,9 +125,15 @@ func (a *Aggregator) clear() {
 	a.nbytes = a.calculateInitialSize()
 }
 
-// Test if a given entry is aggregated record.
+// isAggregated reports whether the entry is an aggregated record.
 func isAggregated(entry *ktypes.PutRecordsRequestEntry) bool {
-	return bytes.HasPrefix(entry.Data, magicNumber)
+	data := entry.Data
+	if !bytes.HasPrefix(data, magicNumber) || len(data) <= len(magicNumber)+md5.Size {
+		return false
+	}
+	payload := data[len(magicNumber) : len(data)-md5.Size]
+	digest := md5.Sum(payload)
+	return bytes.Equal(data[len(data)-md5.Size:], digest[:])
 }
 
 func extractRecords(entry *ktypes.PutRecordsRequestEntry) (out []ktypes.PutRecordsRequestEntry) {

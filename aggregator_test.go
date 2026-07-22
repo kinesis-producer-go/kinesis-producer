@@ -6,6 +6,7 @@ import (
 	"sync"
 	"testing"
 
+	ktypes "github.com/aws/aws-sdk-go-v2/service/kinesis/types"
 	"github.com/go-openapi/testify/v2/assert"
 )
 
@@ -61,6 +62,24 @@ func TestAggregation(t *testing.T) {
 		}
 		assert.True(t, found, "record not found after extracting: "+c)
 	}
+}
+
+func TestIsAggregated(t *testing.T) {
+	a := NewAggregator()
+	data := []byte("hello")
+	a.Put(data, a.CalculateAddSize(data))
+	entry, err := a.Drain()
+	assert.Nil(t, err)
+	assert.True(t, isAggregated(entry), "real aggregate should pass all checks")
+
+	short := &ktypes.PutRecordsRequestEntry{Data: []byte{0xF3, 0x89, 0x9A, 0xC2, 'h', 'i'}}
+	assert.False(t, isAggregated(short), "magic prefix without room for the checksum")
+
+	fake := &ktypes.PutRecordsRequestEntry{Data: append([]byte{0xF3, 0x89, 0x9A, 0xC2}, make([]byte, 40)...)}
+	assert.False(t, isAggregated(fake), "magic prefix with an invalid checksum")
+
+	entry.Data[5] ^= 0xFF
+	assert.False(t, isAggregated(entry), "corrupted aggregate must fail the checksum")
 }
 
 func TestDrainEmptyAggregator(t *testing.T) {

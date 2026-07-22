@@ -300,10 +300,15 @@ func (p *Producer) flush(records []ktypes.PutRecordsRequestEntry, reason string)
 func (p *Producer) dispatchFailures(records []ktypes.PutRecordsRequestEntry, err error) {
 	for _, r := range records {
 		if isAggregated(&r) {
-			p.dispatchFailures(extractRecords(&r), err)
-		} else {
-			p.failure <- &FailureRecord{err, r.Data, *r.PartitionKey}
+			// if extraction fails, dispatch the entry as a plain record
+			if extracted := extractRecords(&r); len(extracted) > 0 {
+				for _, sub := range extracted {
+					p.failure <- &FailureRecord{err, sub.Data, *sub.PartitionKey}
+				}
+				continue
+			}
 		}
+		p.failure <- &FailureRecord{err, r.Data, *r.PartitionKey}
 	}
 }
 

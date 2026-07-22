@@ -230,6 +230,56 @@ func TestPutEmptyData(t *testing.T) {
 	}
 }
 
+func TestNotifyFailuresMagicPrefixData(t *testing.T) {
+	m := &clientMock{
+		incoming:  make(map[int][]string),
+		responses: []responseMock{{Error: errors.New("transport error")}},
+	}
+	p := New(&Config{
+		StreamName:          new("foo"),
+		MaxConnections:      1,
+		BatchCount:          1,
+		AggregateBatchCount: 3,
+		Client:              m,
+	})
+	failures := p.NotifyFailures()
+	var got [][]byte
+	done := make(chan struct{})
+	go func() {
+		for f := range failures {
+			got = append(got, f.Data)
+		}
+		close(done)
+	}()
+	p.Start()
+
+	// user payloads starting with the KPL magic number used to panic the
+	// flush goroutine (4-19 bytes) or swallow the notification (>= 20 bytes)
+	short := []byte{0xF3, 0x89, 0x9A, 0xC2, 'h', 'e', 'l', 'l', 'o', '!'}
+	long := append([]byte{0xF3, 0x89, 0x9A, 0xC2}, make([]byte, 30)...)
+	for _, r := range [][]byte{short, long, []byte("normal-record")} {
+		if err := p.Put(r); err != nil {
+			t.Fatal(err)
+		}
+	}
+	p.Stop()
+	<-done
+
+	if len(got) != 3 {
+		t.Fatalf("received %d failure notifications, want 3", len(got))
+	}
+	want := map[string]bool{string(short): true, string(long): true, "normal-record": true}
+	for _, d := range got {
+		if !want[string(d)] {
+			t.Errorf("unexpected failure payload %q", d)
+		}
+		delete(want, string(d))
+	}
+	for missing := range want {
+		t.Errorf("missing failure payload %q", missing)
+	}
+}
+
 func TestNotify(t *testing.T) {
 	kError := errors.New("ResourceNotFoundException: Stream foo under account X not found")
 	p := New(&Config{
