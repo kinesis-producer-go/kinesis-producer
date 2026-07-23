@@ -9,9 +9,40 @@ and using the same aggregation format that [KPL][kpl-url] use.
 ### Useful links
 - [Documentation site][docs-url]
 - [Go Reference][godoc-url]
+- [Optional CBOR + gzip transport][cbor-gzip-url]
 - [Aggregation format][aggregation-format-url]
 - [Considerations When Using KPL Aggregation][kpl-aggregation]
 - [Consumer De-aggregation][de-aggregation]
+
+### Optional: smaller `PutRecords` wire payloads
+
+This project maintains an optional fork of the AWS SDK for Go V2 Kinesis
+client. It keeps the same Go imports and API while changing the
+client-to-Kinesis transport:
+
+- Smithy RPC v2 CBOR encodes record data as native byte strings, avoiding
+  JSON base64 expansion.
+- `PutRecords` request bodies use gzip by default when the serialized body is
+  at least 10 KiB, the AWS SDK's default request-compression threshold.
+- KPL aggregation, the bytes stored in Kinesis, and consumer de-aggregation
+  are unchanged.
+
+Enable it in the consuming application's module:
+
+```sh
+go mod edit --replace \
+  github.com/aws/aws-sdk-go-v2/service/kinesis=github.com/kinesis-producer-go/aws-sdk-go-v2/service/kinesis@kinesis-rpcv2-cbor-gzip
+go mod tidy
+```
+
+`go mod tidy` resolves the branch tip to an immutable Go pseudo-version.
+Re-run the same two commands to pick up a newer branch tip. No application
+code changes are required; continue importing
+`github.com/aws/aws-sdk-go-v2/service/kinesis` and constructing the client
+with `kinesis.NewFromConfig`.
+
+See [CBOR + gzip transport][cbor-gzip-url] for behavior, scope, configuration,
+verification, and rollback details.
 
 ### Example
 ```go
@@ -114,6 +145,7 @@ import (
 [MIT][license-url]
 
 [docs-url]: https://kinesis-producer-go.github.io/
+[cbor-gzip-url]: https://kinesis-producer-go.github.io/cbor-gzip
 [godoc-url]: https://pkg.go.dev/github.com/kinesis-producer-go/kinesis-producer
 [godoc-img]: https://pkg.go.dev/badge/github.com/kinesis-producer-go/kinesis-producer.svg
 [kpl-url]: https://github.com/awslabs/amazon-kinesis-producer
