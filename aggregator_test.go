@@ -1,6 +1,8 @@
 package producer
 
 import (
+	"bytes"
+	"crypto/md5"
 	"math/rand"
 	"strconv"
 	"sync"
@@ -8,6 +10,7 @@ import (
 
 	ktypes "github.com/aws/aws-sdk-go-v2/service/kinesis/types"
 	"github.com/go-openapi/testify/v2/assert"
+	"google.golang.org/protobuf/proto"
 )
 
 func TestSizeAndCount(t *testing.T) {
@@ -87,4 +90,38 @@ func TestDrainEmptyAggregator(t *testing.T) {
 	entry, err := a.Drain()
 	assert.Nil(t, entry, "should return an nil entry")
 	assert.Nil(t, err, "should not return an error")
+}
+
+// TestDrainMatchesReferenceEncoding guards the envelope Drain assembles by hand.
+func TestDrainMatchesReferenceEncoding(t *testing.T) {
+	for _, size := range []int{0, 1, 127, 128, 1024, 16384} {
+		name := "size " + strconv.Itoa(size) + ": "
+		a := NewAggregator()
+		records := make([][]byte, 5)
+		for i := range records {
+			records[i] = bytes.Repeat([]byte{byte(i + 1)}, size)
+			a.Put(records[i], a.CalculateAddSize(records[i]))
+		}
+		want := a.Size()
+
+		entry, err := a.Drain()
+		assert.Nil(t, err, name+"drain should not fail")
+		assert.Equal(t, len(entry.Data), want, name+"entry length should match the size the aggregator promised")
+
+		protos := make([]*Record, len(records))
+		for i, data := range records {
+			protos[i] = Record_builder{PartitionKeyIndex: proto.Uint64(0), Data: data}.Build()
+		}
+		message, err := proto.Marshal(AggregatedRecord_builder{
+			PartitionKeyTable: []string{*entry.PartitionKey},
+			Records:           protos,
+		}.Build())
+		assert.Nil(t, err, name+"reference marshal should not fail")
+		checkSum := md5.Sum(message)
+		// Literal, so that editing the constant cannot make this check agree with it.
+		reference := append([]byte{0xF3, 0x89, 0x9A, 0xC2}, message...)
+		reference = append(reference, checkSum[:]...)
+
+		assert.True(t, bytes.Equal(entry.Data, reference), name+"entry should match the reference encoding byte for byte")
+	}
 }

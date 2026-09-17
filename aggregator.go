@@ -94,24 +94,20 @@ func (a *Aggregator) Drain() (*ktypes.PutRecordsRequestEntry, error) {
 	}
 
 	partitionKey := RandPartitionKey()
-	aggregatedRecordData, err := proto.Marshal(AggregatedRecord_builder{
+	data := make([]byte, 0, a.nbytes)
+	data = append(data, magicNumber...)
+	data, err := proto.MarshalOptions{}.MarshalAppend(data, AggregatedRecord_builder{
 		PartitionKeyTable: []string{partitionKey},
 		Records:           a.buf,
 	}.Build())
 	if err != nil {
 		return nil, err
 	}
-	h := md5.New()
-	h.Write(aggregatedRecordData)
-	checkSum := h.Sum(nil)
-
-	var buffer bytes.Buffer
-	buffer.WriteString(magicNumber)
-	buffer.Write(aggregatedRecordData)
-	buffer.Write(checkSum)
+	checkSum := md5.Sum(data[len(magicNumber):])
+	data = append(data, checkSum[:]...)
 
 	entry := &ktypes.PutRecordsRequestEntry{
-		Data:         buffer.Bytes(),
+		Data:         data,
 		PartitionKey: new(partitionKey),
 	}
 	a.clear()
