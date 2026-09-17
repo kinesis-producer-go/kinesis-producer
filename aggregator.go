@@ -9,9 +9,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-var (
-	magicNumber = []byte{0xF3, 0x89, 0x9A, 0xC2}
-)
+const magicNumber = "\xF3\x89\x9A\xC2"
 
 type Aggregator struct {
 	buf    []*Record
@@ -108,7 +106,7 @@ func (a *Aggregator) Drain() (*ktypes.PutRecordsRequestEntry, error) {
 	checkSum := h.Sum(nil)
 
 	var buffer bytes.Buffer
-	buffer.Write(magicNumber)
+	buffer.WriteString(magicNumber)
 	buffer.Write(aggregatedRecordData)
 	buffer.Write(checkSum)
 
@@ -128,7 +126,7 @@ func (a *Aggregator) clear() {
 // isAggregated reports whether the entry is an aggregated record.
 func isAggregated(entry *ktypes.PutRecordsRequestEntry) bool {
 	data := entry.Data
-	if !bytes.HasPrefix(data, magicNumber) || len(data) <= len(magicNumber)+md5.Size {
+	if !bytes.HasPrefix(data, []byte(magicNumber)) || len(data) <= len(magicNumber)+md5.Size {
 		return false
 	}
 	payload := data[len(magicNumber) : len(data)-md5.Size]
