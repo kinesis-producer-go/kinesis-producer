@@ -54,28 +54,30 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
+	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/kinesis"
 	"github.com/kinesis-producer-go/kinesis-producer"
 )
 
+// Each in-flight PutRecords holds its own connection, so the pool is sized to match.
+const maxConnections = 24
+
 func main() {
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.MaxIdleConns = 20
-	transport.MaxIdleConnsPerHost = 20
-	httpClient := &http.Client{
-		Transport: transport,
-	}
+	httpClient := awshttp.NewBuildableClient().WithTransportOptions(func(tr *http.Transport) {
+		tr.MaxIdleConns = maxConnections
+		tr.MaxIdleConnsPerHost = maxConnections
+	})
 	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("us-west-2"), config.WithHTTPClient(httpClient))
 	if err != nil {
 		log.Fatalf("unable to load SDK config, %v", err)
 	}
 	client := kinesis.NewFromConfig(cfg)
 	pr := producer.New(&producer.Config{
-		StreamName:   new("test"),
-		BacklogCount: 2000,
-		Client:       client,
+		StreamName:     new("test"),
+		BacklogCount:   2000,
+		MaxConnections: maxConnections,
+		Client:         client,
 	})
 
 	pr.Start()

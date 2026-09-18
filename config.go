@@ -59,7 +59,8 @@ type Config struct {
 	// BacklogCount determines the channel capacity before Put() will begin blocking. Default to `BatchCount`.
 	BacklogCount int
 
-	// Number of requests to sent concurrently. Default to 24.
+	// Number of requests to send concurrently. Default to 24.
+	// The HTTP client's idle connection pool should be at least as deep.
 	MaxConnections int
 
 	// Logger is the logger used. Default to slog.Default().
