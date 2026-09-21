@@ -4,22 +4,23 @@ import (
 	"testing"
 
 	"github.com/go-openapi/testify/v2/assert"
+	"github.com/kinesis-producer-go/kinesis-producer/internal/kpl"
 	"google.golang.org/protobuf/proto"
 )
 
 func TestMessage(t *testing.T) {
-	aggregatedRecord := AggregatedRecord_builder{
+	aggregatedRecord := kpl.AggregatedRecord_builder{
 		PartitionKeyTable: []string{"key1"},
-		Records: []*Record{
-			Record_builder{
+		Records: []*kpl.Record{
+			kpl.Record_builder{
 				PartitionKeyIndex: proto.Uint64(0),
 				Data:              []byte("{\"group_id\": \"one\", \"word\": \"xxxxxx\", \"time_unix\": 1746421505}"),
 			}.Build(),
-			Record_builder{
+			kpl.Record_builder{
 				PartitionKeyIndex: proto.Uint64(0),
 				Data:              []byte("{\"group_id\": \"two\", \"word\": \"yyyyyy\", \"time_unix\": 1751872027}}"),
 			}.Build(),
-			Record_builder{
+			kpl.Record_builder{
 				PartitionKeyIndex: proto.Uint64(0),
 				Data:              []byte("{\"group_id\": \"three\", \"word\": \"zzzzzz\", \"time_unix\": 1757408949}}"),
 			}.Build(),

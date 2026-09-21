@@ -10,6 +10,7 @@ import (
 
 	ktypes "github.com/aws/aws-sdk-go-v2/service/kinesis/types"
 	"github.com/go-openapi/testify/v2/assert"
+	"github.com/kinesis-producer-go/kinesis-producer/internal/kpl"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -108,11 +109,11 @@ func TestDrainMatchesReferenceEncoding(t *testing.T) {
 		assert.Nil(t, err, name+"drain should not fail")
 		assert.Equal(t, len(entry.Data), want, name+"entry length should match the size the aggregator promised")
 
-		protos := make([]*Record, len(records))
+		protos := make([]*kpl.Record, len(records))
 		for i, data := range records {
-			protos[i] = Record_builder{PartitionKeyIndex: proto.Uint64(0), Data: data}.Build()
+			protos[i] = kpl.Record_builder{PartitionKeyIndex: proto.Uint64(0), Data: data}.Build()
 		}
-		message, err := proto.Marshal(AggregatedRecord_builder{
+		message, err := proto.Marshal(kpl.AggregatedRecord_builder{
 			PartitionKeyTable: []string{*entry.PartitionKey},
 			Records:           protos,
 		}.Build())

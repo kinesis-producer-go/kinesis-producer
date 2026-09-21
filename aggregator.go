@@ -5,6 +5,7 @@ import (
 	"crypto/md5"
 
 	ktypes "github.com/aws/aws-sdk-go-v2/service/kinesis/types"
+	"github.com/kinesis-producer-go/kinesis-producer/internal/kpl"
 	"google.golang.org/protobuf/encoding/protowire"
 	"google.golang.org/protobuf/proto"
 )
@@ -12,7 +13,7 @@ import (
 const magicNumber = "\xF3\x89\x9A\xC2"
 
 type Aggregator struct {
-	buf    []*Record
+	buf    []*kpl.Record
 	nbytes int
 }
 
@@ -32,7 +33,7 @@ func (a *Aggregator) calculateInitialSize() int {
 // NewAggregator creates a new aggregator with proper initialization
 func NewAggregator() *Aggregator {
 	a := &Aggregator{
-		buf: make([]*Record, 0),
+		buf: make([]*kpl.Record, 0),
 	}
 	a.nbytes = a.calculateInitialSize()
 	return a
@@ -76,7 +77,7 @@ func (a *Aggregator) CalculateAddSize(data []byte) int {
 
 // Put record using `data`. This method is thread-safe.
 func (a *Aggregator) Put(data []byte, addSize int) {
-	a.buf = append(a.buf, Record_builder{
+	a.buf = append(a.buf, kpl.Record_builder{
 		PartitionKeyIndex: proto.Uint64(0),
 		Data:              data,
 	}.Build())
@@ -96,7 +97,7 @@ func (a *Aggregator) Drain() (*ktypes.PutRecordsRequestEntry, error) {
 	partitionKey := RandPartitionKey()
 	data := make([]byte, 0, a.nbytes)
 	data = append(data, magicNumber...)
-	data, err := proto.MarshalOptions{}.MarshalAppend(data, AggregatedRecord_builder{
+	data, err := proto.MarshalOptions{}.MarshalAppend(data, kpl.AggregatedRecord_builder{
 		PartitionKeyTable: []string{partitionKey},
 		Records:           a.buf,
 	}.Build())
@@ -115,7 +116,7 @@ func (a *Aggregator) Drain() (*ktypes.PutRecordsRequestEntry, error) {
 }
 
 func (a *Aggregator) clear() {
-	a.buf = make([]*Record, 0)
+	a.buf = make([]*kpl.Record, 0)
 	a.nbytes = a.calculateInitialSize()
 }
 
@@ -132,7 +133,7 @@ func isAggregated(entry *ktypes.PutRecordsRequestEntry) bool {
 
 func extractRecords(entry *ktypes.PutRecordsRequestEntry) (out []ktypes.PutRecordsRequestEntry) {
 	src := entry.Data[len(magicNumber) : len(entry.Data)-md5.Size]
-	dest := new(AggregatedRecord)
+	dest := new(kpl.AggregatedRecord)
 	err := proto.Unmarshal(src, dest)
 	if err != nil {
 		return
