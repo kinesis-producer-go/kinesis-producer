@@ -30,7 +30,7 @@ var (
 type Producer struct {
 	sync.RWMutex
 	*Config
-	aggregator *Aggregator
+	aggregator *aggregator
 	semaphore  *semaphore.Weighted
 	records    chan *ktypes.PutRecordsRequestEntry
 	failure    chan *FailureRecord
@@ -52,7 +52,7 @@ func New(config *Config) *Producer {
 		done:       make(chan struct{}),
 		records:    make(chan *ktypes.PutRecordsRequestEntry, config.BacklogCount),
 		semaphore:  semaphore.NewWeighted(int64(config.MaxConnections)),
-		aggregator: NewAggregator(),
+		aggregator: newAggregator(),
 	}
 }
 
@@ -82,7 +82,7 @@ func (p *Producer) Put(data []byte) error {
 	if len(data) > p.AggregateBatchSize {
 		p.records <- &ktypes.PutRecordsRequestEntry{
 			Data:         data,
-			PartitionKey: new(RandPartitionKey()),
+			PartitionKey: new(randPartitionKey()),
 		}
 		return nil
 	}

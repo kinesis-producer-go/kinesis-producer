@@ -12,14 +12,14 @@ import (
 
 const magicNumber = "\xF3\x89\x9A\xC2"
 
-type Aggregator struct {
+type aggregator struct {
 	buf    []*kpl.Record
 	nbytes int
 }
 
 // calculateInitialSize computes the initial size of an empty aggregated record.
 // This includes the magic number, MD5 checksum, and the partition key table overhead.
-func (a *Aggregator) calculateInitialSize() int {
+func (a *aggregator) calculateInitialSize() int {
 	initialSize := len(magicNumber) + md5.Size
 
 	// Tag-Length-Value size for string partition_key_table = 1 in AggregatedRecord;
@@ -30,9 +30,9 @@ func (a *Aggregator) calculateInitialSize() int {
 	return initialSize
 }
 
-// NewAggregator creates a new aggregator with proper initialization
-func NewAggregator() *Aggregator {
-	a := &Aggregator{
+// newAggregator creates a new aggregator with proper initialization
+func newAggregator() *aggregator {
+	a := &aggregator{
 		buf: make([]*kpl.Record, 0),
 	}
 	a.nbytes = a.calculateInitialSize()
@@ -41,12 +41,12 @@ func NewAggregator() *Aggregator {
 
 // Size return how many bytes if all records in the aggregator stored serialized to KPL Aggregated Record format.
 // Including the magic number, protobuf message and checksum.
-func (a *Aggregator) Size() int {
+func (a *aggregator) Size() int {
 	return a.nbytes
 }
 
 // Count return how many records stored in the aggregator.
-func (a *Aggregator) Count() int {
+func (a *aggregator) Count() int {
 	return len(a.buf)
 }
 
@@ -54,7 +54,7 @@ func (a *Aggregator) Count() int {
 // serialized aggregated record if the given data is added. This includes the protobuf
 // wire format overhead for the record and the aggregated record structure.
 // This method does not modify the aggregator state.
-func (a *Aggregator) CalculateAddSize(data []byte) int {
+func (a *aggregator) CalculateAddSize(data []byte) int {
 	// Record wire size
 	recordSize := 0
 	// Tag-Value size for required uint64 partition_key_index = 1 in message Record;
@@ -76,7 +76,7 @@ func (a *Aggregator) CalculateAddSize(data []byte) int {
 }
 
 // Put record using `data`. This method is thread-safe.
-func (a *Aggregator) Put(data []byte, addSize int) {
+func (a *aggregator) Put(data []byte, addSize int) {
 	a.buf = append(a.buf, kpl.Record_builder{
 		PartitionKeyIndex: proto.Uint64(0),
 		Data:              data,
@@ -89,12 +89,12 @@ func (a *Aggregator) Put(data []byte, addSize int) {
 // that compatible with the KCL's deaggregation logic.
 //
 // If you interested to know more about it. see: aggregation-format.md
-func (a *Aggregator) Drain() (*ktypes.PutRecordsRequestEntry, error) {
+func (a *aggregator) Drain() (*ktypes.PutRecordsRequestEntry, error) {
 	if a.Count() == 0 {
 		return nil, nil
 	}
 
-	partitionKey := RandPartitionKey()
+	partitionKey := randPartitionKey()
 	data := make([]byte, 0, a.nbytes)
 	data = append(data, magicNumber...)
 	data, err := proto.MarshalOptions{}.MarshalAppend(data, kpl.AggregatedRecord_builder{
@@ -115,7 +115,7 @@ func (a *Aggregator) Drain() (*ktypes.PutRecordsRequestEntry, error) {
 	return entry, nil
 }
 
-func (a *Aggregator) clear() {
+func (a *aggregator) clear() {
 	a.buf = make([]*kpl.Record, 0)
 	a.nbytes = a.calculateInitialSize()
 }

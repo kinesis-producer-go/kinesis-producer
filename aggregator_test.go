@@ -15,7 +15,7 @@ import (
 )
 
 func TestSizeAndCount(t *testing.T) {
-	a := NewAggregator()
+	a := newAggregator()
 	assert.Equal(t, a.Count(), 0, "size and count should equal to 0 at the beginning")
 	assert.Equal(t, a.Size(), a.calculateInitialSize(), "size should equal to initial size at the beginning")
 
@@ -38,7 +38,7 @@ func TestSizeAndCount(t *testing.T) {
 
 func TestAggregation(t *testing.T) {
 	var wg sync.WaitGroup
-	a := NewAggregator()
+	a := newAggregator()
 	n := 50
 	wg.Add(n)
 	for i := range n {
@@ -69,7 +69,7 @@ func TestAggregation(t *testing.T) {
 }
 
 func TestIsAggregated(t *testing.T) {
-	a := NewAggregator()
+	a := newAggregator()
 	data := []byte("hello")
 	a.Put(data, a.CalculateAddSize(data))
 	entry, err := a.Drain()
@@ -87,7 +87,7 @@ func TestIsAggregated(t *testing.T) {
 }
 
 func TestDrainEmptyAggregator(t *testing.T) {
-	a := NewAggregator()
+	a := newAggregator()
 	entry, err := a.Drain()
 	assert.Nil(t, entry, "should return an nil entry")
 	assert.Nil(t, err, "should not return an error")
@@ -97,7 +97,7 @@ func TestDrainEmptyAggregator(t *testing.T) {
 func TestDrainMatchesReferenceEncoding(t *testing.T) {
 	for _, size := range []int{0, 1, 127, 128, 1024, 16384} {
 		name := "size " + strconv.Itoa(size) + ": "
-		a := NewAggregator()
+		a := newAggregator()
 		records := make([][]byte, 5)
 		for i := range records {
 			records[i] = bytes.Repeat([]byte{byte(i + 1)}, size)
