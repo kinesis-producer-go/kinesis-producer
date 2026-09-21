@@ -28,8 +28,8 @@ var (
 
 // Producer batches records.
 type Producer struct {
-	sync.RWMutex
-	*Config
+	mu         sync.RWMutex
+	config     *Config
 	aggregator *aggregator
 	semaphore  *semaphore.Weighted
 	records    chan *ktypes.PutRecordsRequestEntry
@@ -48,7 +48,7 @@ type Producer struct {
 func New(config *Config) *Producer {
 	config.defaults()
 	return &Producer{
-		Config:     config,
+		config:     config,
 		done:       make(chan struct{}),
 		records:    make(chan *ktypes.PutRecordsRequestEntry, config.BacklogCount),
 		semaphore:  semaphore.NewWeighted(int64(config.MaxConnections)),
@@ -64,9 +64,9 @@ func New(config *Config) *Producer {
 // doesn't exist), the message will returned by the Producer.
 // Add a listener with `Producer.NotifyFailures` to handle undeliverable messages.
 func (p *Producer) Put(data []byte) error {
-	p.RLock()
+	p.mu.RLock()
 	stopped := p.stopped
-	p.RUnlock()
+	p.mu.RUnlock()
 	if stopped {
 		return ErrStoppedProducer
 	}
@@ -79,7 +79,7 @@ func (p *Producer) Put(data []byte) error {
 	}
 
 	// if the record size is bigger than aggregation size handle it as a simple kinesis record
-	if len(data) > p.AggregateBatchSize {
+	if len(data) > p.config.AggregateBatchSize {
 		p.records <- &ktypes.PutRecordsRequestEntry{
 			Data:         data,
 			PartitionKey: new(randPartitionKey()),
@@ -87,23 +87,23 @@ func (p *Producer) Put(data []byte) error {
 		return nil
 	}
 
-	p.Lock()
+	p.mu.Lock()
 
 	addSize := p.aggregator.CalculateAddSize(data)
 	// Check if the aggregator needs to be drained using a more precise method
 	// that considers the exact serialized size impact of adding the new data
-	needToDrain := p.aggregator.Size()+addSize > p.AggregateBatchSize || p.aggregator.Count() >= p.AggregateBatchCount
+	needToDrain := p.aggregator.Size()+addSize > p.config.AggregateBatchSize || p.aggregator.Count() >= p.config.AggregateBatchCount
 	var (
 		record *ktypes.PutRecordsRequestEntry
 		err    error
 	)
 	if needToDrain {
 		if record, err = p.aggregator.Drain(); err != nil {
-			p.Logger.Error("drain aggregator", "error", err)
+			p.config.Logger.Error("drain aggregator", "error", err)
 		}
 	}
 	p.aggregator.Put(data, addSize)
-	p.Unlock()
+	p.mu.Unlock()
 	// release the lock and then pipe the record to the records channel
 	// we did it, because the "send" operation blocks when the backlog is full
 	// and this can cause deadlock(when we never release the lock)
@@ -125,27 +125,27 @@ type FailureRecord struct {
 // The incoming struct has a copy of the Data and the PartitionKey along with some
 // error information about why the publishing failed.
 func (p *Producer) NotifyFailures() <-chan *FailureRecord {
-	p.Lock()
-	defer p.Unlock()
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	if !p.notify {
 		p.notify = true
-		p.failure = make(chan *FailureRecord, p.BacklogCount)
+		p.failure = make(chan *FailureRecord, p.config.BacklogCount)
 	}
 	return p.failure
 }
 
 // Start the producer
 func (p *Producer) Start() {
-	p.Logger.Info("starting producer", "stream", aws.ToString(p.StreamName), "streamARN", aws.ToString(p.StreamARN))
+	p.config.Logger.Info("starting producer", "stream", aws.ToString(p.config.StreamName), "streamARN", aws.ToString(p.config.StreamARN))
 	go p.loop()
 }
 
 // Stop the producer gracefully. Flushes any in-flight data.
 func (p *Producer) Stop() {
-	p.Lock()
+	p.mu.Lock()
 	p.stopped = true
-	p.Unlock()
-	p.Logger.Info("stopping producer", "backlog", len(p.records))
+	p.mu.Unlock()
+	p.config.Logger.Info("stopping producer", "backlog", len(p.records))
 
 	// drain
 	if record, ok := p.drainIfNeed(); ok {
@@ -157,23 +157,23 @@ func (p *Producer) Stop() {
 	// wait
 	<-p.done
 	// Wait for all flush goroutines to complete by acquiring all permits
-	_ = p.semaphore.Acquire(context.Background(), int64(p.MaxConnections))
+	_ = p.semaphore.Acquire(context.Background(), int64(p.config.MaxConnections))
 
 	// close the failures channel if we notify
-	p.RLock()
+	p.mu.RLock()
 	if p.notify {
 		close(p.failure)
 	}
-	p.RUnlock()
-	p.Logger.Info("stopped producer")
+	p.mu.RUnlock()
+	p.config.Logger.Info("stopped producer")
 }
 
 // loop and flush at the configured interval, or when the buffer is exceeded.
 func (p *Producer) loop() {
 	size := 0
 	drain := false
-	buf := make([]ktypes.PutRecordsRequestEntry, 0, p.BatchCount)
-	tick := time.NewTicker(p.FlushInterval)
+	buf := make([]ktypes.PutRecordsRequestEntry, 0, p.config.BatchCount)
+	tick := time.NewTicker(p.config.FlushInterval)
 
 	flush := func(msg string) {
 		_ = p.semaphore.Acquire(context.Background(), 1)
@@ -186,12 +186,12 @@ func (p *Producer) loop() {
 		// the record size limit applies to the total size of the
 		// partition key and data blob.
 		rsize := len(record.Data) + len([]byte(*record.PartitionKey))
-		if size+rsize > p.BatchSize {
+		if size+rsize > p.config.BatchSize {
 			flush("batch size")
 		}
 		size += rsize
 		buf = append(buf, *record)
-		if len(buf) >= p.BatchCount {
+		if len(buf) >= p.config.BatchCount {
 			flush("batch length")
 		}
 	}
@@ -206,7 +206,7 @@ func (p *Producer) loop() {
 				if size > 0 {
 					flush("drain")
 				}
-				p.Logger.Info("backlog drained")
+				p.config.Logger.Info("backlog drained")
 				return
 			}
 			bufAppend(record)
@@ -225,15 +225,15 @@ func (p *Producer) loop() {
 }
 
 func (p *Producer) drainIfNeed() (*ktypes.PutRecordsRequestEntry, bool) {
-	p.RLock()
+	p.mu.RLock()
 	needToDrain := p.aggregator.Count() > 0
-	p.RUnlock()
+	p.mu.RUnlock()
 	if needToDrain {
-		p.Lock()
+		p.mu.Lock()
 		record, err := p.aggregator.Drain()
-		p.Unlock()
+		p.mu.Unlock()
 		if err != nil {
-			p.Logger.Error("drain aggregator", "error", err)
+			p.config.Logger.Error("drain aggregator", "error", err)
 		} else {
 			return record, true
 		}
@@ -251,30 +251,30 @@ func (p *Producer) flush(records []ktypes.PutRecordsRequestEntry, reason string)
 	defer p.semaphore.Release(1)
 
 	for {
-		p.Logger.Info("flushing records", "reason", reason, "records", len(records))
-		out, err := p.Client.PutRecords(context.Background(), &k.PutRecordsInput{
-			StreamARN:  p.StreamARN,
-			StreamName: p.StreamName,
+		p.config.Logger.Info("flushing records", "reason", reason, "records", len(records))
+		out, err := p.config.Client.PutRecords(context.Background(), &k.PutRecordsInput{
+			StreamARN:  p.config.StreamARN,
+			StreamName: p.config.StreamName,
 			Records:    records,
 		})
 
 		if err != nil {
-			p.Logger.Error("flush", "error", err)
-			p.RLock()
+			p.config.Logger.Error("flush", "error", err)
+			p.mu.RLock()
 			notify := p.notify
-			p.RUnlock()
+			p.mu.RUnlock()
 			if notify {
 				p.dispatchFailures(records, err)
 			}
 			return
 		}
 
-		if p.Verbose {
+		if p.config.Verbose {
 			for i, r := range out.Records {
 				if r.ErrorCode != nil {
-					p.Logger.Info("PutRecords error item", "index", i, "ErrorCode", aws.ToString(r.ErrorCode), "ErrorMessage", aws.ToString(r.ErrorMessage))
+					p.config.Logger.Info("PutRecords error item", "index", i, "ErrorCode", aws.ToString(r.ErrorCode), "ErrorMessage", aws.ToString(r.ErrorMessage))
 				} else {
-					p.Logger.Info("PutRecords success item", "index", i, "ShardId", aws.ToString(r.ShardId), "SequenceNumber", aws.ToString(r.SequenceNumber))
+					p.config.Logger.Info("PutRecords success item", "index", i, "ShardId", aws.ToString(r.ShardId), "SequenceNumber", aws.ToString(r.SequenceNumber))
 				}
 			}
 		}
@@ -286,7 +286,7 @@ func (p *Producer) flush(records []ktypes.PutRecordsRequestEntry, reason string)
 
 		duration := b.Duration()
 
-		p.Logger.Info("put failures", "failures", failed, "backoff", duration.String())
+		p.config.Logger.Info("put failures", "failures", failed, "backoff", duration.String())
 		time.Sleep(duration)
 
 		// change the logging state for the next itertion
