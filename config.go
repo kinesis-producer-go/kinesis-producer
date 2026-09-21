@@ -14,12 +14,13 @@ import (
 // Constants and default configuration take from:
 // github.com/awslabs/amazon-kinesis-producer/.../KinesisProducerConfiguration.java
 const (
-	maxRecordSize          = 1 << 20 // 1MiB
-	maxRequestSize         = 5 << 20 // 5MiB
+	maxRecordSize          = 1 << 20  // 1MiB
+	maxRequestSize         = 10 << 20 // 10MiB
 	maxRecordsPerRequest   = 500
 	maxAggregationSize     = 1 << 20 // 1MiB
 	maxAggregationCount    = 4294967295
-	defaultAggregationSize = 51200 // 50k
+	defaultBatchSize       = 5 << 20 // 5MiB
+	defaultAggregationSize = 51200   // 50k
 	defaultMaxConnections  = 24
 	defaultFlushInterval   = 5 * time.Second
 )
@@ -46,7 +47,7 @@ type Config struct {
 	BatchCount int
 
 	// BatchSize determine the maximum number of bytes to send with a PutRecords request.
-	// Must not exceed 5MiB; Default to 5MiB.
+	// Must not exceed 10MiB; Default to 5MiB.
 	BatchSize int
 
 	// AggregateBatchCount determine the maximum number of items to pack into an aggregated record.
@@ -83,9 +84,9 @@ func (c *Config) defaults() {
 	}
 	falseOrPanic(c.BatchCount > maxRecordsPerRequest, "kinesis: BatchCount exceeds 500")
 	if c.BatchSize == 0 {
-		c.BatchSize = maxRequestSize
+		c.BatchSize = defaultBatchSize
 	}
-	falseOrPanic(c.BatchSize > maxRequestSize, "kinesis: BatchSize exceeds 5MiB")
+	falseOrPanic(c.BatchSize > maxRequestSize, "kinesis: BatchSize exceeds 10MiB")
 	if c.BacklogCount == 0 {
 		c.BacklogCount = maxRecordsPerRequest
 	}
