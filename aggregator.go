@@ -137,6 +137,7 @@ func extractRecords(entry *ktypes.PutRecordsRequestEntry) (out []ktypes.PutRecor
 	if err != nil {
 		return
 	}
+	out = make([]ktypes.PutRecordsRequestEntry, 0, len(dest.GetRecords()))
 	for i := range dest.GetRecords() {
 		r := dest.GetRecords()[i]
 		out = append(out, ktypes.PutRecordsRequestEntry{
