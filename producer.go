@@ -22,7 +22,7 @@ import (
 // Errors
 var (
 	ErrStoppedProducer    = errors.New("Unable to Put record. Producer is already stopped")
-	ErrRecordSizeExceeded = errors.New("Data must be less than or equal to 1MB in size")
+	ErrRecordSizeExceeded = errors.New("Data must be less than or equal to 1MiB in size")
 	ErrNilData            = errors.New("Data must not be nil, use an empty slice for a zero-length record")
 )
 

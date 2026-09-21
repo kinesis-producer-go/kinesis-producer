@@ -32,7 +32,7 @@ type Putter interface {
 // Config is the Producer configuration.
 type Config struct {
 
-	// StreamName is the ARN of the stream.
+	// StreamARN is the ARN of the stream.
 	StreamARN *string
 
 	// StreamName is the Kinesis stream.
@@ -42,7 +42,7 @@ type Config struct {
 	FlushInterval time.Duration
 
 	// BatchCount determine the maximum number of items to pack in batch.
-	// Must not exceed length. Defaults to 500.
+	// Must not exceed 500. Defaults to 500.
 	BatchCount int
 
 	// BatchSize determine the maximum number of bytes to send with a PutRecords request.
@@ -96,7 +96,7 @@ func (c *Config) defaults() {
 	if c.AggregateBatchSize == 0 {
 		c.AggregateBatchSize = defaultAggregationSize
 	}
-	falseOrPanic(c.AggregateBatchSize > maxAggregationSize, "kinesis: AggregateBatchSize exceeds 50KB")
+	falseOrPanic(c.AggregateBatchSize > maxAggregationSize, "kinesis: AggregateBatchSize exceeds 1MiB")
 	if c.MaxConnections == 0 {
 		c.MaxConnections = defaultMaxConnections
 	}
